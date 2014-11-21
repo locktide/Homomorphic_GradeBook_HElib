@@ -46,18 +46,7 @@ int main(int argc, char** argv) {
 		if(teacher_input[0] == 'q') {
 			break;
 		}
-		/*if (grades_vector.size() < 1) {
-                cout << "not enough grades inserted" << endl;
-        }
-        */
-            /*
-            else {
-			    // perform the operation
-			    evaluate(teacher_input[0]);
-            } //end else
-            */
-
-
+		
 		else {
 			cout << "In the add grades to encypt book block" << endl;
 			// should be a number "grade", insert it
@@ -83,7 +72,8 @@ int main(int argc, char** argv) {
 		cout << "d 1- display grades" << endl;
 		cout << "a 2- add point value to all grades in book" << endl;
 		cout << "s 3- subtract point value to all grades in book" << endl;
-		cout << "q 4- quit" << endl;
+		cout << "v 4- find average and send back" << endl;
+		cout << "q 5- quit" << endl;
 		
 		cin >> teacher_choice;
 
@@ -96,23 +86,12 @@ int main(int argc, char** argv) {
 			{
 				// TODO: decrypt before printing
 				//Loop through the grade book
-				//enc_arr.decrypt(grades_vector, *secretKey, clear_grades_vector);
 				cout << "The " << grades_vector.size() << " grades are: " ;
 				for(int i = 0; i < grades_vector.size(); i ++){
-					//PlaintextArray p(enc_arr);
-					enc_arr.decrypt(grades_vector[i], *secretKey, clear_grades_vector);
-    				//enc_arr.decrypt(grades_vector[i], *secretKey, p); //grades_vector is still encrypted data
-   					//cout << p.decode(enc_arr) << endl;
-   					//p.print(cout);
-   					//clear_grades_vector.push_back(p.get());
+					enc_arr.decrypt(grades_vector[i], *secretKey, clear_grades_vector); 
    					cout << clear_grades_vector[i] << " ";
 				}//end for loop
-				/*
-				//print clear grade book
-				for(int i = 0; i < clear_grades_vector.size(); i++)
-					cout << clear_grades_vector[i] << " ";
-    			cout << endl;
-    			*/
+				
     			cout << endl;
     			break;
     		}
@@ -153,7 +132,6 @@ int main(int argc, char** argv) {
             	PlaintextArray p(enc_arr); 
             	p.encode(teacher_points);
             	enc_arr.encrypt(c, *publicKey, p);
-    			//op2 = new Ctxt(atoi(teacher_input.data()));
     			//set op2 to "c" the encrypted point value we will add to all grades
             	op2 = new Ctxt(c);
 
@@ -170,12 +148,37 @@ int main(int argc, char** argv) {
 			}
 			case 4:
 			{
+				//need to add all members of grades_vector then divide by total
+				//work as if all data is on third party cloud resource
+				float div = 1 / (float)grades_vector.size();
+				Ctxt& c_total = *(new Ctxt(*publicKey));
+				PlaintextArray p(enc_arr);
+				p.encode(div);
+				enc_arr.encrypt(c_total, *publicKey, p);
+				cout << "created encrypted value for divider "<< div << endl;
+				Ctxt *c_sum;
+				for(int i = 0; i < grades_vector.size(); i++){
+					(*c_sum) += grades_vector[i];
+				} //end for loop
+				cout << "added up grade book vector" << endl;
+				//divide by total now... can not divide.. muliply by inverse
+				op1 = new Ctxt(c_total);
+				(*c_sum) *= (*op1);
+				//(*c_sum) /= (*c_total);
+				cout << "performed average operation" << endl;
+				//now decrypt and print
+				vector<long> average;
+				enc_arr.decrypt(*c_sum, *secretKey, average); 
+   				cout << "The average is " << average[0] << endl;
+			}
+			case 5:
+			{
 				cout << "Exiting, As you wish" << endl;
 				break;
 			}
 			default: cout << "Invalid command, Try again" << endl;
 		} //end switch
-		if(teacher_choice == 4)
+		if(teacher_choice == 5)
 			break; 
 
 	} //end while loop
