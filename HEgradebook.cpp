@@ -1,4 +1,7 @@
 //Homomorphic encryption, class grade book
+//Made by Michael Lockette student project for the University of Colorado Colorado Springs
+
+//include libraries specialized for Homomorphic use
 #include <FHE.h>
 #include <EncryptedArray.h>
 #include <NTL/lzz_pXFactoring.h>
@@ -7,6 +10,9 @@
 #include <vector>
 #include <string>
 #include <stdlib.h>
+
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -22,13 +28,19 @@ void setupHELib();
 
 void greeting() {
 	cout << "Welcome to the homomorphic encryption grade book" << endl;
-	cout << "insert grades seperated by spaces. ex:75 91 100" << endl;
-	cout << "Enter q to quit" << endl;
+	cout << "insert grades seperated by commas in a csv file named grades.csv" << endl;
+	cout << "Could take a few minutes to load csv file" << endl;
 }
 
 //begin main
 int main(int argc, char** argv) {
 	// Local variables
+	//read file in stuff
+	ifstream infile; //input file
+	infile.open("grades.csv", ios::in); //open the file grades.csv
+	string line;
+	vector<string> tmp; //store string values from csv file
+	
 	string teacher_input;
 	int teacher_points;
 	int teacher_choice;
@@ -39,40 +51,35 @@ int main(int argc, char** argv) {
     //host for our plaintext values when they go to get encrypted then insert into grades_vector
     EncryptedArray enc_arr(*context, G);
 
-    // insert loop
-	while(true) {
-		
-		cin >> teacher_input;
-		if(teacher_input[0] == 'q') {
-			break;
-		}
-		
-		else {
-			cout << "In the add grades to encypt book block" << endl;
-			// should be a number "grade", insert it
-			// encrypt it first 
-            Ctxt& c = *(new Ctxt(*publicKey));
-            PlaintextArray p(enc_arr); 
-            p.encode(atoi(teacher_input.data()));
-            //test if my values were inserted correctly
-            //int grade = atoi(teacher_input.data());
-            //cout << grade + " grade" << endl;
-            enc_arr.encrypt(c, *publicKey, p); 
-            
-			//grades_vector.push_back(atoi( teacher_input.data() ));
-            grades_vector.push_back(c);
-		} //end else
-		
+	//csv file insert grades loop
+	getline(infile, line);
+	stringstream linestream (line);
+	string cell;
+	cout << "Begin while in loop from csv" << endl;
+	while(getline(linestream, cell, ',')){ //how I define the comma as a seperating value
+		tmp.push_back(cell);
+	}//end while
+
+	Ctxt& c = *(new Ctxt(*publicKey));
+    PlaintextArray p(enc_arr); 
+	for(int i=0; i < tmp.size(); i++){
+		//use tmp values into encrypted vector
+		cout << "In the add grades to encypt book block" << endl;
+		// should be a number "grade", insert it
+		// encrypt it first
+		p.encode(atoi(tmp[i].c_str())); 
+		enc_arr.encrypt(c, *publicKey, p);
+		grades_vector.push_back(c);
+	}//end for loop	
 
 
-	} //end insert while loop
 	cout <<"start ineractive portion" << endl;
 	// operations while loop
 	while(true) {
 		cout << "d 1- display grades" << endl;
 		cout << "a 2- add point value to all grades in book" << endl;
 		cout << "s 3- subtract point value to all grades in book" << endl;
-		cout << "v 4- find average and send back" << endl;
+		cout << "v 4- find class average" << endl;
 		cout << "q 5- quit" << endl;
 		
 		cin >> teacher_choice;
@@ -148,28 +155,24 @@ int main(int argc, char** argv) {
 			}
 			case 4:
 			{
-				//need to add all members of grades_vector then divide by total
-				//work as if all data is on third party cloud resource
-				float div = 1 / (float)grades_vector.size();
-				Ctxt& c_total = *(new Ctxt(*publicKey));
-				PlaintextArray p(enc_arr);
-				p.encode(div);
-				enc_arr.encrypt(c_total, *publicKey, p);
-				cout << "created encrypted value for divider "<< div << endl;
+				cout << "This feature is under progress" << endl;
+				//need to get size of grades vector and sum...
+				int class_size = grades_vector.size();
 				Ctxt *c_sum;
-				for(int i = 0; i < grades_vector.size(); i++){
-					(*c_sum) += grades_vector[i];
+				c_sum = new Ctxt(grades_vector[0]);
+				cout << "begin sum loop" << endl;
+				for(int i = 1; i < grades_vector.size(); i++){
+					//i think I gotta make grade_vector[i] a pointer value first
+					op1 = new Ctxt(grades_vector[i]);
+					(*c_sum) += (*op1);
+					cout << "added another value to sum" << endl;
 				} //end for loop
 				cout << "added up grade book vector" << endl;
-				//divide by total now... can not divide.. muliply by inverse
-				op1 = new Ctxt(c_total);
-				(*c_sum) *= (*op1);
-				//(*c_sum) /= (*c_total);
-				cout << "performed average operation" << endl;
-				//now decrypt and print
 				vector<long> average;
-				enc_arr.decrypt(*c_sum, *secretKey, average); 
-   				cout << "The average is " << average[0] << endl;
+				enc_arr.decrypt(*c_sum, *secretKey, average);
+				double average_clear_txt = (double)average[0] / (double)class_size; 
+   				cout << "The average is " << average_clear_txt << endl;
+				
 			}
 			case 5:
 			{
@@ -188,7 +191,8 @@ int main(int argc, char** argv) {
 
 //function to set HE resources
 void setupHELib() {
-    long p=101;
+    //set this value so large so it can handle average operation
+    long p=1013;
     long r=1;
     long L=8;
     long c=2;
